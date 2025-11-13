@@ -1,0 +1,42 @@
+@Library('blackduck-logs-publisher') _
+
+pipeline {
+    agent { label 'mac-sh' }
+
+    stages {
+        stage("Build") {
+            steps {
+                script {
+                    echo "JOB_NAME: ${env.JOB_NAME}"
+
+                    dir('nodejs-npm') {
+                        sh 'node --version'
+                        sh 'npm --version'
+                        sh 'npm install'
+                    }
+                }
+            }
+        }
+
+        stage("coverity-simplified-scan") {
+            steps {
+                script {
+                    dir('nodejs-npm') {
+                        security_scan coverity_prComment_enabled: true, coverity_waitForScan: true, product: 'coverity'
+                        
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            pushJenkinsLogsToGitHub([
+                githubOrg: 'coverity-cnc-jenkins-samples',
+                repoName: 'simplified-example',
+                retentionCount: 5
+            ])
+        }
+    }
+}
